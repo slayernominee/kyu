@@ -71,7 +71,6 @@ fn init(path: Option<String>) {
 
 fn hash_object(path: String) {
     let rep = Repository::load(None).unwrap();
-    let obj = objects::Object::load(&rep, "1e143c83828e1f647f8597c25e12bd6c24cb0979");
 
-    obj.save(&rep);
+    // TODO: load the object from the file and create a blob object
 }
