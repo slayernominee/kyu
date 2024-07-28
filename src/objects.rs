@@ -178,6 +178,7 @@ impl Object {
         let data = self.serialize();
         let hash = self.hash();
         let path = repository.get_object_path(&hash);
+
         Self::write(&data, &path);
         hash
     }
@@ -187,6 +188,15 @@ impl Object {
         let mut z = ZlibEncoder::new(Vec::new(), Compression::default());
         z.write_all(data).expect("Failed to compress object");
         let compressed = z.finish().expect("Failed to finish compression");
+
+        // create the folder
+        let folder = path
+            .split("/")
+            .take(path.split("/").count() - 1)
+            .collect::<Vec<&str>>()
+            .join("/");
+        let _ = std::fs::create_dir_all(folder);
+
         std::fs::write(path, compressed).expect("Failed to write object file");
     }
 
