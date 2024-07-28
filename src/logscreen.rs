@@ -1,11 +1,11 @@
-use chrono::{DateTime, Datelike, FixedOffset, TimeZone, Utc};
+use chrono::{Datelike, FixedOffset, TimeZone, Utc};
 use colored::*;
 use std::collections::VecDeque;
 
 use crate::objects::{Commit, Object, KVLM};
 use crate::repository::Repository;
 
-pub fn display_log(mut commit: Commit, rep: Repository) {
+pub fn display_log(commit: Commit, rep: Repository) {
     let mut commits_to_visit: VecDeque<Commit> = VecDeque::new();
     commits_to_visit.push_back(commit);
 
