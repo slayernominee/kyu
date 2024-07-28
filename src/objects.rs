@@ -13,9 +13,20 @@ struct Commit {
     size: usize,
 }
 
-struct Blob {
+pub struct Blob {
     data: Vec<u8>,
     size: usize,
+}
+
+impl Blob {
+    pub fn from_file(path: &str) -> Object {
+        let data = std::fs::read(path).expect("Couldnt read file");
+        let size = data.len();
+
+        let blob = Blob { data, size };
+
+        Object::Blob(blob)
+    }
 }
 
 struct Tree {
@@ -45,11 +56,12 @@ impl Object {
         }
     }
 
-    pub fn get_data_str(&self) -> String {
+    pub fn cat(&self) -> String {
         let data = self.get_data();
-        std::str::from_utf8(data)
-            .expect("Failed to convert data to string")
-            .to_string()
+        match std::str::from_utf8(data) {
+            Ok(s) => s.to_string(),
+            Err(_) => format!("{:?}", data),
+        }
     }
 
     pub fn get_type(&self) -> &str {
@@ -162,11 +174,12 @@ impl Object {
     }
 
     /// save an object to the repository
-    pub fn save(&self, repository: &Repository) {
+    pub fn save(&self, repository: &Repository) -> String {
         let data = self.serialize();
-        let hash = Self::hash(&data);
+        let hash = self.hash();
         let path = repository.get_object_path(&hash);
         Self::write(&data, &path);
+        hash
     }
 
     /// compress and byte array and write it to a file
@@ -177,8 +190,9 @@ impl Object {
         std::fs::write(path, compressed).expect("Failed to write object file");
     }
 
-    /// hash a byte array with sha1
-    fn hash(data: &Vec<u8>) -> String {
+    /// get the hash of an object
+    pub fn hash(&self) -> String {
+        let data = self.get_data();
         let mut hasher = Sha1::new();
         hasher.update(data);
         let result = hasher.finalize();

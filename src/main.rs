@@ -1,4 +1,5 @@
-use clap::{Parser, Subcommand};
+use clap::{Parser, Subcommand, ValueEnum};
+use objects::{Blob, Object};
 use repository::Repository;
 
 mod objects;
@@ -11,12 +12,26 @@ struct Args {
     command: Commands,
 }
 
+#[derive(ValueEnum, Debug, Clone, PartialEq, Eq)]
+enum ObjectType {
+    Blob,
+    Commit,
+    Tree,
+    Tag,
+}
+
 #[derive(Subcommand, Debug)]
 enum Commands {
     Add {
         files: Vec<String>,
     },
-    CatFile,
+    /// Print the contents of a blob object
+    CatFile {
+        #[arg(value_enum)]
+        object_type: ObjectType,
+
+        hash: String,
+    },
     Commit {
         #[arg(short, long)]
         message: Option<String>,
@@ -26,6 +41,12 @@ enum Commands {
     /// Convert an file into a blob object
     HashObject {
         path: String,
+
+        #[arg(short, long)]
+        write: bool,
+
+        #[arg(long, value_enum, name = "type")]
+        type_: Option<ObjectType>,
     },
     /// Initialize a new git repository
     Init {
@@ -48,7 +69,8 @@ fn main() {
 
     match args.command {
         Commands::Init { path } => init(path),
-        Commands::HashObject { path } => hash_object(path),
+        Commands::CatFile { object_type, hash } => cat_file(object_type, &hash),
+        Commands::HashObject { path, write, type_ } => hash_object(path, write, type_),
         _ => println!("Not implemented yet"),
     }
 }
@@ -69,8 +91,28 @@ fn init(path: Option<String>) {
     );
 }
 
-fn hash_object(path: String) {
-    let rep = Repository::load(None).unwrap();
+fn cat_file(object_type: ObjectType, hash: &str) {
+    if object_type != ObjectType::Blob {
+        unimplemented!("Only blobs are supported for now")
+    }
 
-    // TODO: load the object from the file and create a blob object
+    let rep = Repository::load(None).unwrap();
+    // TODO: Implement loading with short hashes etc.
+    let obj = Object::load(&rep, hash);
+    println!("{}", obj.cat())
+}
+
+fn hash_object(path: String, write: bool, object_type: Option<ObjectType>) {
+    if object_type.is_some() && object_type.unwrap() != ObjectType::Blob {
+        unimplemented!("Only blobs are supported for now")
+    }
+
+    let rep = Repository::load(None).unwrap();
+    let obj = Blob::from_file(&path);
+
+    if write {
+        obj.save(&rep);
+    }
+
+    println!("{}", obj.hash());
 }
