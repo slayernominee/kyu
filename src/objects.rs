@@ -38,6 +38,12 @@ struct Tag {
     size: usize,
 }
 
+impl Commit {
+    pub fn hash(&self) -> String {
+        Object::Commit(self.clone()).hash()
+    }
+}
+
 pub trait KVLM {
     fn get_data(&self) -> &Vec<u8>;
 

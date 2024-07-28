@@ -2,6 +2,7 @@ use clap::{Parser, Subcommand, ValueEnum};
 use objects::{Blob, Object, KVLM};
 use repository::Repository;
 
+mod logscreen;
 mod objects;
 mod repository;
 
@@ -133,34 +134,5 @@ fn log(commit: String) {
         _ => panic!("head should be a commit object"),
     };
 
-    // read head
-
-    while commit.get_parents().len() > 0 {
-        let parent = commit.get_parents()[0].clone();
-        let parent = Object::load(&rep, &parent);
-        let parent = match parent {
-            Object::Commit(c) => c,
-            _ => panic!("parent should be a commit object"),
-        };
-
-        let c = Object::Commit(commit.clone());
-
-        println!("commit {}", c.hash());
-        println!("Author: {}", commit.get_author());
-        //println!("Date: {}", commit.get_date());
-        println!();
-        println!("    {}", commit.get_message());
-        println!();
-
-        commit = parent;
-    }
-
-    let c = Object::Commit(commit.clone());
-
-    println!("commit {}", c.hash());
-    println!("Author: {}", commit.get_author());
-    //println!("Date: {}", commit.get_date());
-    println!();
-    println!("    {}", commit.get_message());
-    println!();
+    logscreen::display_log(commit, rep);
 }
