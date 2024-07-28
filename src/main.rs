@@ -1,8 +1,5 @@
 use clap::{Parser, Subcommand};
 
-#[macro_use]
-extern crate ini;
-
 mod repository;
 
 #[derive(Parser)]
@@ -51,7 +48,6 @@ fn main() {
 
 fn init(path: Option<String>) {
     let rep = repository::Repository::init(path);
-    let rep = repository::Repository::load();
 
     if rep.is_err() {
         println!("Failed to initialize repository: {:?}", rep.err().unwrap());
