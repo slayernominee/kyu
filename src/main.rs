@@ -1,5 +1,7 @@
 use clap::{Parser, Subcommand};
+use repository::Repository;
 
+mod objects;
 mod repository;
 
 #[derive(Parser)]
@@ -21,7 +23,11 @@ enum Commands {
     },
     CheckIgnore,
     Checkout,
-    HashObject,
+    /// Convert an file into a blob object
+    HashObject {
+        path: String,
+    },
+    /// Initialize a new git repository
     Init {
         path: Option<String>,
     },
@@ -42,6 +48,7 @@ fn main() {
 
     match args.command {
         Commands::Init { path } => init(path),
+        Commands::HashObject { path } => hash_object(path),
         _ => println!("Not implemented yet"),
     }
 }
@@ -56,5 +63,14 @@ fn init(path: Option<String>) {
 
     let rep = rep.ok().unwrap();
 
-    println!("rep: {:?}", rep);
+    println!(
+        "Initialized new repository in the directory: {}",
+        rep.get_workdir()
+    );
+}
+
+fn hash_object(path: String) {
+    let rep = Repository::load(None).unwrap();
+    let obj = objects::Object::deserialize(&rep, "1e143c83828e1f647f8597c25e12bd6c24cb0979");
+    println!("{:?}", obj.get_type());
 }

@@ -48,8 +48,16 @@ impl Repository {
         Ok(s)
     }
 
-    pub fn load() -> Result<Self, RepError> {
-        let workdir = env::current_dir().unwrap().to_str().unwrap().to_string();
+    pub fn get_object_path(&self, sha: &str) -> String {
+        let mut path = self.gitdir.clone() + "/objects/";
+        path.push_str(&sha[..2]);
+        path.push('/');
+        path.push_str(&sha[2..]);
+        path
+    }
+
+    pub fn load(path: Option<String>) -> Result<Self, RepError> {
+        let workdir = path.unwrap_or(env::current_dir().unwrap().to_str().unwrap().to_string());
         let gitdir = workdir.clone() + "/.git";
         let config_path = gitdir.clone() + "/config";
 
@@ -91,6 +99,10 @@ impl Repository {
             }
         }
     }
+
+    pub fn get_workdir(&self) -> &String {
+        &self.workdir
+    }
 }
 
 // Config
@@ -107,12 +119,12 @@ struct Config {
 impl Config {
     fn default() -> Self {
         Self {
-            bare: false,
-            repository_format_version: 0,
-            file_mode: false,
-            //ignore_case: false,
-            //precompose_unicode: false,
-            //logal_lref_updates: false,
+            bare: false,                  // bare -> no working directory, only the .git directory
+            repository_format_version: 0, // 0 -> without extensions in the git directory, 1 -> with extensions
+            file_mode: false,             // tracking file mode changes (permissions)
+                                          //ignore_case: false,
+                                          //precompose_unicode: false,
+                                          //logal_lref_updates: false,
         }
     }
 

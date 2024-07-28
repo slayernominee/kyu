@@ -7,4 +7,7 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.5.11", features = ["derive"] }
+flate2 = { version = "1.0.30", features = ["zlib"] }
+hex-literal = "0.4.1"
 rust-ini = "0.21.0"
+sha1 = "0.10.6"
