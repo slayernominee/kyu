@@ -14,4 +14,3 @@ flate2 = { version = "1.0.30", features = ["zlib"] }
 hex-literal = "0.4.1"
 rust-ini = "0.21.0"
 sha1 = "0.10.6"
-termion = "4.0.2"
