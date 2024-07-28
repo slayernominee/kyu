@@ -45,6 +45,13 @@ impl Object {
         }
     }
 
+    pub fn get_data_str(&self) -> String {
+        let data = self.get_data();
+        std::str::from_utf8(data)
+            .expect("Failed to convert data to string")
+            .to_string()
+    }
+
     pub fn get_type(&self) -> &str {
         match self {
             Object::Commit(_) => "commit",
@@ -63,12 +70,16 @@ impl Object {
         }
     }
 
-    pub fn deserialize(repository: &Repository, sha: &str) -> Self {
+    pub fn load(repository: &Repository, sha: &str) -> Self {
         let path = repository.get_object_path(sha);
         let data = Self::read(&path);
 
-        // the data consists of the object type, a space 0x20, the object size, a null byte 0x00, and the object content
+        Self::deserialize(data)
+    }
 
+    /// deserialize an object from the repository by its uncompressed data
+    fn deserialize(data: Vec<u8>) -> Self {
+        // the data consists of the object type, a space 0x20, the object size, a null byte 0x00, and the object content
         let mut data = data.as_slice();
         let mut space = data.iter().position(|&x| x == 0x20).unwrap();
         let obj_type = &data[0..space];
@@ -116,6 +127,7 @@ impl Object {
         }
     }
 
+    /// read an object file with a given path and decrompress it with zlib
     fn read(path: &str) -> Vec<u8> {
         let data = std::fs::read(path).expect("Failed to read object file");
 
@@ -127,7 +139,49 @@ impl Object {
         s
     }
 
-    pub fn serialize(&self) {
-        unimplemented!()
+    /// serialize an object to a byte array
+    fn serialize(&self) -> Vec<u8> {
+        let t = match self {
+            Object::Tag(_) => "tag",
+            Object::Commit(_) => "commit",
+            Object::Tree(_) => "tree",
+            Object::Blob(_) => "blob",
+        };
+
+        let data = self.get_data();
+        let size = data.len();
+
+        let mut s = Vec::new();
+        s.extend_from_slice(t.as_bytes());
+        s.push(0x20);
+        s.extend_from_slice(size.to_string().as_bytes());
+        s.push(0x00);
+        s.extend_from_slice(data);
+
+        s
+    }
+
+    /// save an object to the repository
+    pub fn save(&self, repository: &Repository) {
+        let data = self.serialize();
+        let hash = Self::hash(&data);
+        let path = repository.get_object_path(&hash);
+        Self::write(&data, &path);
+    }
+
+    /// compress and byte array and write it to a file
+    fn write(data: &Vec<u8>, path: &str) {
+        let mut z = ZlibEncoder::new(Vec::new(), Compression::default());
+        z.write_all(data).expect("Failed to compress object");
+        let compressed = z.finish().expect("Failed to finish compression");
+        std::fs::write(path, compressed).expect("Failed to write object file");
+    }
+
+    /// hash a byte array with sha1
+    fn hash(data: &Vec<u8>) -> String {
+        let mut hasher = Sha1::new();
+        hasher.update(data);
+        let result = hasher.finalize();
+        result.iter().map(|b| format!("{:02x}", b)).collect()
     }
 }

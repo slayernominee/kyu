@@ -71,6 +71,7 @@ fn init(path: Option<String>) {
 
 fn hash_object(path: String) {
     let rep = Repository::load(None).unwrap();
-    let obj = objects::Object::deserialize(&rep, "1e143c83828e1f647f8597c25e12bd6c24cb0979");
-    println!("{:?}", obj.get_type());
+    let obj = objects::Object::load(&rep, "1e143c83828e1f647f8597c25e12bd6c24cb0979");
+
+    obj.save(&rep);
 }
