@@ -202,7 +202,7 @@ impl Object {
 
     /// get the hash of an object
     pub fn hash(&self) -> String {
-        let data = self.get_data();
+        let data = self.serialize();
         let mut hasher = Sha1::new();
         hasher.update(data);
         let result = hasher.finalize();
