@@ -1,5 +1,5 @@
 use clap::{Parser, Subcommand, ValueEnum};
-use objects::{Blob, Object};
+use objects::{Blob, Object, KVLM};
 use repository::Repository;
 
 mod objects;
@@ -52,7 +52,11 @@ enum Commands {
     Init {
         path: Option<String>,
     },
-    Log,
+    /// Show the commit history
+    Log {
+        #[arg(default_value = "HEAD")]
+        commit: String,
+    },
     LsFiles,
     LsTree,
     RevParse,
@@ -71,6 +75,7 @@ fn main() {
         Commands::Init { path } => init(path),
         Commands::CatFile { object_type, hash } => cat_file(object_type, &hash),
         Commands::HashObject { path, write, type_ } => hash_object(path, write, type_),
+        Commands::Log { commit } => log(commit),
         _ => println!("Not implemented yet"),
     }
 }
@@ -92,19 +97,20 @@ fn init(path: Option<String>) {
 }
 
 fn cat_file(object_type: ObjectType, hash: &str) {
-    if object_type != ObjectType::Blob {
-        unimplemented!("Only blobs are supported for now")
+    if object_type == ObjectType::Tree {
+        unimplemented!("Trees are not supported yet")
     }
 
     let rep = Repository::load(None).unwrap();
     // TODO: Implement loading with short hashes etc.
     let obj = Object::load(&rep, hash);
-    println!("{}", obj.cat())
+
+    println!("{}", obj.cat());
 }
 
 fn hash_object(path: String, write: bool, object_type: Option<ObjectType>) {
     if object_type.is_some() && object_type.unwrap() != ObjectType::Blob {
-        unimplemented!("Only blobs are supported for now")
+        unimplemented!("Only blobs can be hashed for now")
     }
 
     let rep = Repository::load(None).unwrap();
@@ -115,4 +121,46 @@ fn hash_object(path: String, write: bool, object_type: Option<ObjectType>) {
     }
 
     println!("{}", obj.hash());
+}
+
+fn log(commit: String) {
+    let rep = Repository::load(None).unwrap();
+    let hash = rep.get_last_commit_hash();
+
+    let commit = Object::load(&rep, &hash);
+    let mut commit = match commit {
+        Object::Commit(c) => c,
+        _ => panic!("head should be a commit object"),
+    };
+
+    // read head
+
+    while commit.get_parents().len() > 0 {
+        let parent = commit.get_parents()[0].clone();
+        let parent = Object::load(&rep, &parent);
+        let parent = match parent {
+            Object::Commit(c) => c,
+            _ => panic!("parent should be a commit object"),
+        };
+
+        let c = Object::Commit(commit.clone());
+
+        println!("commit {}", c.hash());
+        println!("Author: {}", commit.get_author());
+        //println!("Date: {}", commit.get_date());
+        println!();
+        println!("    {}", commit.get_message());
+        println!();
+
+        commit = parent;
+    }
+
+    let c = Object::Commit(commit.clone());
+
+    println!("commit {}", c.hash());
+    println!("Author: {}", commit.get_author());
+    //println!("Date: {}", commit.get_date());
+    println!();
+    println!("    {}", commit.get_message());
+    println!();
 }

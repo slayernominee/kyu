@@ -1,14 +1,13 @@
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
-use hex_literal::hex;
 use sha1::{Digest, Sha1};
-use std::io;
-use std::io::prelude::*;
+use std::{collections::HashMap, io::prelude::*};
 
 use crate::repository::Repository;
 
-struct Commit {
+#[derive(Clone)]
+pub struct Commit {
     data: Vec<u8>,
     size: usize,
 }
@@ -37,6 +36,69 @@ struct Tree {
 struct Tag {
     data: Vec<u8>,
     size: usize,
+}
+
+pub trait KVLM {
+    fn get_data(&self) -> &Vec<u8>;
+
+    fn get_parents(&self) -> Vec<String> {
+        let (_, parents) = self.to_kvlm();
+        parents
+    }
+
+    fn get_message(&self) -> String {
+        let (kvlm, _) = self.to_kvlm();
+        kvlm.get("message").expect("No message").to_string()
+    }
+
+    fn get_author(&self) -> String {
+        let (kvlm, _) = self.to_kvlm();
+        kvlm.get("author").expect("No author").to_string()
+    }
+
+    fn to_kvlm(&self) -> (HashMap<String, String>, Vec<String>) {
+        let data = std::str::from_utf8(self.get_data()).expect("Invalid utf8 data");
+        let data = data.replace("\n ", "");
+
+        let message = data.split("\n\n").collect::<Vec<&str>>()[1];
+
+        let data = data.split("\n\n").collect::<Vec<&str>>()[0];
+
+        let mut parents = vec![];
+
+        let mut kvlm = data
+            .split("\n")
+            .map(|line| {
+                let mut parts = line.split(' ');
+                let key = parts.next().expect("No key");
+                let value = parts.collect::<Vec<&str>>().join(" ");
+
+                if key == "parent" {
+                    parents.push(value.to_string());
+
+                    // dont continue
+                    return (String::new(), String::new());
+                }
+                (key.to_string(), value.to_string())
+            })
+            .collect::<HashMap<String, String>>();
+
+        kvlm.insert("message".to_string(), message.to_string());
+
+        (kvlm, parents)
+    }
+}
+
+impl KVLM for Commit {
+    fn get_data(&self) -> &Vec<u8> {
+        &self.data
+    }
+}
+
+impl KVLM for Tag {
+    fn get_data(&self) -> &Vec<u8> {
+        &self.data
+    }
 }
 
 pub enum Object {
