@@ -1,3 +1,4 @@
+use chrono::{DateTime, Datelike, FixedOffset, TimeZone, Utc};
 use colored::*;
 use std::collections::VecDeque;
 
@@ -26,8 +27,36 @@ pub fn display_log(mut commit: Commit, rep: Repository) {
             );
         }
 
-        println!("Author: {}", commit.get_author());
-        //println!("Date: {}", commit.get_date());
+        let author_data = commit.get_author();
+        let author_data = author_data.split(" ").collect::<Vec<&str>>();
+        let author = author_data[0..2].join(" ");
+        println!("Author: {}", author);
+
+        if author_data.len() > 3 {
+            let date = author_data[2].parse::<i64>();
+            let offset = author_data[3].parse::<i32>().unwrap_or_else(|_| 0);
+            let offset = FixedOffset::east_opt(offset * 36).unwrap(); // / 100 * 3600 = * 36
+
+            match date {
+                Ok(date) => {
+                    let date = Utc.timestamp_opt(date, 0).unwrap();
+                    let date = date.with_timezone(&offset);
+                    println!(
+                        "Date: {}, {} {} {} {} {}",
+                        date.weekday(),
+                        date.day(),
+                        date.format("%b"),
+                        date.year(),
+                        date.time(),
+                        date.timezone(),
+                    );
+                }
+                Err(_) => {
+                    println!("Date: unknown");
+                }
+            }
+        }
+
         println!();
         println!("    {}", commit.get_message());
         println!();
