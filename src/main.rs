@@ -38,7 +38,10 @@ enum Commands {
         message: Option<String>,
     },
     CheckIgnore,
-    Checkout,
+    Checkout {
+        #[arg(short, long)]
+        branch: Option<String>,
+    },
     /// Convert an file into a blob object
     HashObject {
         path: String,
@@ -59,7 +62,9 @@ enum Commands {
         commit: String,
     },
     LsFiles,
-    LsTree,
+    LsTree {
+        hash: String,
+    },
     RevParse,
     Rm {
         files: Vec<String>,
@@ -77,6 +82,7 @@ fn main() {
         Commands::CatFile { object_type, hash } => cat_file(object_type, &hash),
         Commands::HashObject { path, write, type_ } => hash_object(path, write, type_),
         Commands::Log { commit } => log(commit),
+        Commands::LsTree { hash } => cat_file(ObjectType::Tree, &hash),
         _ => println!("Not implemented yet"),
     }
 }

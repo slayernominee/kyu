@@ -4,7 +4,7 @@ use flate2::Compression;
 use sha1::{Digest, Sha1};
 use std::{collections::HashMap, io::prelude::*};
 
-use crate::repository::Repository;
+use crate::{repository::Repository, ObjectType};
 
 #[derive(Clone)]
 pub struct Commit {
@@ -31,6 +31,14 @@ impl Blob {
 struct Tree {
     data: Vec<u8>,
     size: usize,
+    objects: Vec<TreeEntry>,
+}
+
+struct TreeEntry {
+    mode: String,
+    name: String,
+    sha: String,
+    object: Object,
 }
 
 struct Tag {
@@ -115,34 +123,47 @@ pub enum Object {
 }
 
 impl Tree {
-    fn decode_data(&self) -> Vec<(String, String, String)> {
-        let mut entries = vec![];
-        let mut data = self.data.as_slice();
+    fn from_data(data: &[u8], size: usize) -> Self {
+        let mut objects = vec![];
+        let mut data_to_process = data.clone();
 
-        while !data.is_empty() {
-            let space = data.iter().position(|&x| x == 0x20).unwrap();
-            let mode = &data[0..space];
+        let repository = Repository::load(None).expect("should be a repository");
+
+        while !data_to_process.is_empty() {
+            let space = data_to_process.iter().position(|&x| x == 0x20).unwrap();
+            let mode = &data_to_process[0..space];
             let mode = std::str::from_utf8(mode).expect("Invalid mode");
-            data = &data[space + 1..];
+            data_to_process = &data_to_process[space + 1..];
 
-            let null = data.iter().position(|&x| x == 0x00).unwrap();
-            let name = &data[0..null];
+            let null = data_to_process.iter().position(|&x| x == 0x00).unwrap();
+            let name = &data_to_process[0..null];
             let name = std::str::from_utf8(name).expect("Invalid name");
-            data = &data[null + 1..];
+            data_to_process = &data_to_process[null + 1..];
 
-            let sha = &data[0..20];
+            let sha = &data_to_process[0..20];
             // binary decode the sha
             let sha = sha
                 .iter()
                 .map(|b| format!("{:02x}", b))
                 .collect::<Vec<String>>()
                 .join("");
-            data = &data[20..];
+            data_to_process = &data_to_process[20..];
 
-            entries.push((mode.to_string(), name.to_string(), sha));
+            let object = Object::load(&repository, &sha);
+
+            objects.push(TreeEntry {
+                mode: mode.to_string(),
+                name: name.to_string(),
+                sha,
+                object,
+            });
         }
 
-        entries
+        Tree {
+            data: data.to_vec(),
+            size,
+            objects,
+        }
     }
 }
 
@@ -168,22 +189,19 @@ impl Object {
             Object::Tree(tree) => {
                 // parse the tree object
 
-                let mut d = tree.decode_data();
-
-                d.insert(
-                    0,
-                    (
-                        "mode".to_string(),
-                        "filename".to_string(),
-                        "sha1 hash".to_string(),
-                    ),
-                );
-                d.insert(1, (String::new(), String::from(""), String::from("")));
-
-                d.iter()
-                    .map(|(mode, name, sha)| format!("{}\t\t{}\t\t{}", mode, name, sha))
+                tree.objects
+                    .iter()
+                    .map(|entry| {
+                        format!(
+                            "{}\t{}\t{}\t{}\n",
+                            entry.mode,
+                            entry.object.get_type(),
+                            entry.sha,
+                            entry.name
+                        )
+                    })
                     .collect::<Vec<String>>()
-                    .join("\n")
+                    .join("")
             }
         }
     }
@@ -245,13 +263,7 @@ impl Object {
                 };
                 Object::Blob(blob)
             }
-            "tree" => {
-                let tree = Tree {
-                    data: content.to_vec(),
-                    size,
-                };
-                Object::Tree(tree)
-            }
+            "tree" => Object::Tree(Tree::from_data(data, size)),
             "tag" => {
                 let tag = Tag {
                     data: content.to_vec(),
