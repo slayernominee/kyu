@@ -145,6 +145,10 @@ impl Tree {
     }
 
     pub fn checkout(&self, path: String, path_to_checkout: String) {
+        if !path_to_checkout.contains(&path) {
+            return;
+        }
+
         for object in self.objects.iter() {
             match object.get_object() {
                 Object::Tree(t) => {
