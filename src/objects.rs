@@ -144,6 +144,25 @@ impl Tree {
         &self.objects
     }
 
+    pub fn checkout(&self, path: String, path_to_checkout: String) {
+        println!("Checking out tree to {}", path);
+        println!("path to checkout: {}", path_to_checkout);
+        for object in self.objects.iter() {
+            match object.get_object() {
+                Object::Tree(t) => {
+                    t.checkout(
+                        path.clone() + "/" + object.get_name(),
+                        path_to_checkout.clone(),
+                    );
+                }
+                Object::Blob(b) => {
+                    //
+                }
+                _ => unimplemented!("Not implemented"),
+            }
+        }
+    }
+
     pub fn display_objects(&self) -> String {
         let mut result = String::new();
         for object in self.objects.iter() {
