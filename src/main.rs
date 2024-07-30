@@ -1,6 +1,6 @@
 use clap::{Parser, Subcommand, ValueEnum};
 use objects::{Blob, Object, KVLM};
-use repository::Repository;
+use repository::{RepError, Repository};
 
 mod logscreen;
 mod objects;
@@ -124,11 +124,24 @@ fn log(commit: String) {
     let rep = Repository::load(None).unwrap();
     let hash = rep.get_last_commit_hash();
 
-    let commit = Object::load(&rep, &hash);
-    let mut commit = match commit {
-        Object::Commit(c) => c,
-        _ => panic!("head should be a commit object"),
-    };
+    match hash {
+        Ok(hash) => {
+            let commit = Object::load(&rep, &hash);
+            let mut commit = match commit {
+                Object::Commit(c) => c,
+                _ => panic!("head should be a commit object"),
+            };
 
-    logscreen::display_log(commit, rep);
+            logscreen::display_log(commit, rep);
+        }
+        Err(RepError::NoCommitsInBranch(branch)) => {
+            println!(
+                "fatal: your current branch '{}' does not have any commits yet",
+                branch
+            );
+        }
+        Err(e) => {
+            println!("fatal: {:?}", e);
+        }
+    }
 }

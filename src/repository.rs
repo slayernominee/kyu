@@ -52,16 +52,24 @@ impl Repository {
         Ok(s)
     }
 
-    pub fn get_last_commit_hash(&self) -> String {
+    pub fn get_last_commit_hash(&self) -> Result<String, RepError> {
         let head_path = self.gitdir.clone() + "/HEAD";
         let head = std::fs::read_to_string(&head_path).unwrap();
         let head = head.trim().split(':').collect::<Vec<&str>>()[1].trim();
 
         let head_path = self.gitdir.clone() + "/" + head;
-        let head = std::fs::read_to_string(&head_path).unwrap();
+        let head = std::fs::read_to_string(&head_path);
+
+        if head.is_err() {
+            let branch = head_path.split('/').collect::<Vec<&str>>();
+            let branch = branch.last().unwrap();
+            return Err(RepError::NoCommitsInBranch(branch.to_string()));
+        }
+        let head = head.unwrap();
+
         let head = head.trim();
 
-        head.to_string()
+        Ok(head.to_string())
     }
 
     pub fn get_object_path(&self, sha: &str) -> String {
@@ -242,6 +250,7 @@ pub enum RepError {
     NotARepository,
     ConfigFileMissing,
     ConfigError(ConfigError),
+    NoCommitsInBranch(String),
 }
 
 #[derive(Debug)]
