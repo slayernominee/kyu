@@ -38,9 +38,11 @@ enum Commands {
         message: Option<String>,
     },
     CheckIgnore,
+    /// Set the current branch / specified folders / files to a specific commit / tree
     Checkout {
-        #[arg(short, long)]
-        branch: Option<String>,
+        commit: String,
+
+        files_or_folders: Option<String>,
     },
     /// Convert an file into a blob object
     HashObject {
@@ -83,6 +85,10 @@ fn main() {
         Commands::HashObject { path, write, type_ } => hash_object(path, write, type_),
         Commands::Log { commit } => log(commit),
         Commands::LsTree { hash } => cat_file(ObjectType::Tree, &hash),
+        Commands::Checkout {
+            commit,
+            files_or_folders,
+        } => checkout(commit, files_or_folders),
         _ => println!("Not implemented yet"),
     }
 }
@@ -150,4 +156,85 @@ fn log(commit: String) {
             println!("fatal: {:?}", e);
         }
     }
+}
+
+fn checkout(commit: String, files_or_folders: Option<String>) {
+    // if files_or_folders is None, checkout the whole commit
+
+    let rep = Repository::load(None).unwrap();
+    let commit = Object::load(&rep, &commit);
+
+    let pwd = std::env::current_dir().unwrap();
+
+    let checkout_point = match files_or_folders {
+        Some(f) => {
+            // check if its a file or folder, if its a folder set the checkout to folder/
+
+            let path = pwd.join(f.clone());
+            if path.is_dir() {
+                if f.ends_with("/") {
+                    format!("/{}", f)
+                } else {
+                    format!("/{}/", f)
+                }
+            } else {
+                format!("/{}", f)
+            }
+        }
+        None => "/".to_string(),
+    };
+
+    let tree = match commit {
+        Object::Commit(c) => {
+            let obj = Object::load(&rep, c.get_tree().as_str());
+
+            match obj {
+                Object::Tree(t) => t,
+                _ => panic!("commit is not a valid commit / tree hash"),
+            }
+        }
+        Object::Tree(t) => t,
+        _ => panic!("commit is not a valid commit / tree hash"),
+    };
+
+    // navigate to the tree to the checkout point
+
+    let checkout_file = checkout_point.ends_with("/"); // wheter to checkout a file or a folder
+
+    // while checkout point has more than one / we need to navigate to the correct tree
+    let mut tree = tree;
+    let mut path = checkout_point.clone();
+
+    while path.matches("/").count() > 1 {
+        let mut path_parts = path.split("/").collect::<Vec<&str>>();
+        path_parts.remove(0); // remove the first empty string
+        let path_part = path_parts.remove(0);
+
+        let mut found = false;
+        for entry in tree.get_objects() {
+            if entry.get_name() == path_part {
+                let obj = Object::load(&rep, entry.get_hash());
+                match obj {
+                    Object::Tree(t) => {
+                        tree = t;
+                        found = true;
+                        break;
+                    }
+                    _ => {
+                        println!("fatal: path '{}' is not a folder", path_part);
+                        return;
+                    }
+                }
+            }
+        }
+
+        if !found {
+            println!("fatal: path '{}' not found in the tree", path_part);
+            return;
+        }
+
+        path = format!("/{}", path_parts.join("/"));
+    }
+
+    println!("{}", tree.display_objects());
 }

@@ -28,17 +28,29 @@ impl Blob {
     }
 }
 
-struct Tree {
+pub struct Tree {
     data: Vec<u8>,
     size: usize,
     objects: Vec<TreeEntry>,
 }
 
-struct TreeEntry {
+pub struct TreeEntry {
     mode: String,
     name: String,
     sha: String,
     object: Object,
+}
+
+impl TreeEntry {
+    pub fn get_object(&self) -> &Object {
+        &self.object
+    }
+    pub fn get_name(&self) -> &str {
+        &self.name
+    }
+    pub fn get_hash(&self) -> &str {
+        &self.sha
+    }
 }
 
 struct Tag {
@@ -58,6 +70,11 @@ pub trait KVLM {
     fn get_parents(&self) -> Vec<String> {
         let (_, parents) = self.to_kvlm();
         parents
+    }
+
+    fn get_tree(&self) -> String {
+        let (kvlm, _) = self.to_kvlm();
+        kvlm.get("tree").expect("No tree").to_string()
     }
 
     fn get_message(&self) -> String {
@@ -123,6 +140,18 @@ pub enum Object {
 }
 
 impl Tree {
+    pub fn get_objects(&self) -> &Vec<TreeEntry> {
+        &self.objects
+    }
+
+    pub fn display_objects(&self) -> String {
+        let mut result = String::new();
+        for object in self.objects.iter() {
+            result.push_str(&format!("{} {} {}\n", object.mode, object.sha, object.name));
+        }
+        result
+    }
+
     fn from_data(data: &[u8], size: usize) -> Self {
         let mut objects = vec![];
         let mut data_to_process = data.clone();
