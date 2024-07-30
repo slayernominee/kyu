@@ -4,6 +4,21 @@ an alternative git client for the command line written in rust
 
 this project is just for fun and nothing serios, use it at your own risk
 
+## Features
+
+this is basicaly a reimplementation of git in rust, so the commands mostly work the same with a few exceptions
+
+currently implemented commands:
+
+-   init
+-   ls-tree <hash>
+-   cat-file <type> <hash>
+    cat file can also be used to print trees (like ls-tree)
+-   hash-object <file> (-w)
+-   log
+-   checkout <hash> (<file/folder>)
+    if checkout is used without <file/folder> it will act like file / folder is workdir instead of switching branches
+
 ## Credits
 
 This whole project is heavily inspired by the wyag tutorial (https://wyag.thb.lt) which is a tutorial about implementing a git client in python
