@@ -145,7 +145,11 @@ impl Tree {
     }
 
     pub fn checkout(&self, path: String, path_to_checkout: String) {
-        if !path_to_checkout.contains(&path) {
+        // the paths differ somewhere and are not subfolders of each other
+        if !path_to_checkout.contains(&path)
+            && !path.contains(&path_to_checkout)
+            && path_to_checkout != path
+        {
             return;
         }
 
