@@ -166,10 +166,13 @@ impl Tree {
                     if !p.contains(&path_to_checkout) {
                         continue;
                     } else {
-                        println!("should checkout: {}/{}", path, object.get_name());
+                        // override the file
+                        std::fs::write(&p, object.get_object().cat()).expect("Couldnt write file");
+
+                        println!("checked out: {}", p);
                     }
                 }
-                _ => unimplemented!("Not implemented"),
+                _ => unimplemented!("Not implemented Commits / Tags in trees"),
             }
         }
     }
