@@ -13,7 +13,11 @@ pub struct Repository {
 
 impl Repository {
     pub fn init(path: Option<String>) -> Result<Self, RepError> {
-        let workdir = path.unwrap_or(env::current_dir().unwrap().to_str().unwrap().to_string());
+        let workdir = match path {
+            Some(p) => p,
+            None => env::current_dir().unwrap().to_str().unwrap().to_string(),
+        };
+
         let gitdir = workdir.clone() + "/.git";
 
         if std::path::Path::new(&gitdir).exists() {
@@ -71,7 +75,25 @@ impl Repository {
     }
 
     pub fn load(path: Option<String>) -> Result<Self, RepError> {
-        let workdir = path.unwrap_or(env::current_dir().unwrap().to_str().unwrap().to_string());
+        let workdir = match path {
+            Some(p) => p,
+            None => {
+                // check if we are in a git repository / subdirectory
+                let mut pwd = env::current_dir().unwrap().to_str().unwrap().to_string();
+
+                let mut gitdir = pwd.clone() + "/.git";
+
+                while pwd != "/" && !std::path::Path::new(&gitdir).exists() {
+                    let p = std::path::Path::new(&pwd);
+                    let parent = p.parent().unwrap();
+                    pwd = parent.to_str().unwrap().to_string();
+                    gitdir = pwd.clone() + "/.git";
+                }
+
+                pwd
+            }
+        };
+
         let gitdir = workdir.clone() + "/.git";
         let config_path = gitdir.clone() + "/config";
 

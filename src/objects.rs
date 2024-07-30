@@ -125,6 +125,7 @@ impl Object {
     }
 
     pub fn cat(&self) -> String {
+        // doesnt work for tree objects
         let data = self.get_data();
         match std::str::from_utf8(data) {
             Ok(s) => s.to_string(),
