@@ -114,6 +114,38 @@ pub enum Object {
     Tag(Tag),
 }
 
+impl Tree {
+    fn decode_data(&self) -> Vec<(String, String, String)> {
+        let mut entries = vec![];
+        let mut data = self.data.as_slice();
+
+        while !data.is_empty() {
+            let space = data.iter().position(|&x| x == 0x20).unwrap();
+            let mode = &data[0..space];
+            let mode = std::str::from_utf8(mode).expect("Invalid mode");
+            data = &data[space + 1..];
+
+            let null = data.iter().position(|&x| x == 0x00).unwrap();
+            let name = &data[0..null];
+            let name = std::str::from_utf8(name).expect("Invalid name");
+            data = &data[null + 1..];
+
+            let sha = &data[0..20];
+            // binary decode the sha
+            let sha = sha
+                .iter()
+                .map(|b| format!("{:02x}", b))
+                .collect::<Vec<String>>()
+                .join("");
+            data = &data[20..];
+
+            entries.push((mode.to_string(), name.to_string(), sha));
+        }
+
+        entries
+    }
+}
+
 impl Object {
     pub fn get_data(&self) -> &Vec<u8> {
         match self {
@@ -125,11 +157,34 @@ impl Object {
     }
 
     pub fn cat(&self) -> String {
-        // doesnt work for tree objects
         let data = self.get_data();
-        match std::str::from_utf8(data) {
-            Ok(s) => s.to_string(),
-            Err(_) => format!("{:?}", data),
+
+        match self {
+            Object::Blob(_) | Object::Commit(_) | Object::Tag(_) => match std::str::from_utf8(data)
+            {
+                Ok(s) => s.to_string(),
+                Err(_) => format!("failed to decode content: {:?}", data),
+            },
+            Object::Tree(tree) => {
+                // parse the tree object
+
+                let mut d = tree.decode_data();
+
+                d.insert(
+                    0,
+                    (
+                        "mode".to_string(),
+                        "filename".to_string(),
+                        "sha1 hash".to_string(),
+                    ),
+                );
+                d.insert(1, (String::new(), String::from(""), String::from("")));
+
+                d.iter()
+                    .map(|(mode, name, sha)| format!("{}\t\t{}\t\t{}", mode, name, sha))
+                    .collect::<Vec<String>>()
+                    .join("\n")
+            }
         }
     }
 

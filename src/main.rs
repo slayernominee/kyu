@@ -98,10 +98,6 @@ fn init(path: Option<String>) {
 }
 
 fn cat_file(object_type: ObjectType, hash: &str) {
-    if object_type == ObjectType::Tree {
-        unimplemented!("Trees are not supported yet")
-    }
-
     let rep = Repository::load(None).unwrap();
     // TODO: Implement loading with short hashes etc.
     let obj = Object::load(&rep, hash);

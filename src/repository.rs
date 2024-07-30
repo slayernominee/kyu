@@ -1,8 +1,6 @@
 use ini::Ini;
 use std::env;
 
-use crate::objects::Object;
-
 // Repository
 #[derive(Debug)]
 pub struct Repository {
