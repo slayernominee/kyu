@@ -145,8 +145,6 @@ impl Tree {
     }
 
     pub fn checkout(&self, path: String, path_to_checkout: String) {
-        println!("Checking out tree to {}", path);
-        println!("path to checkout: {}", path_to_checkout);
         for object in self.objects.iter() {
             match object.get_object() {
                 Object::Tree(t) => {
@@ -156,7 +154,12 @@ impl Tree {
                     );
                 }
                 Object::Blob(b) => {
-                    //
+                    let p = path.clone() + "/" + object.get_name();
+                    if !p.contains(&path_to_checkout) {
+                        continue;
+                    } else {
+                        println!("should checkout: {}/{}", path, object.get_name());
+                    }
                 }
                 _ => unimplemented!("Not implemented"),
             }
