@@ -72,7 +72,7 @@ impl Repository {
         Ok(head.to_string())
     }
 
-    pub fn ref_resolve(&self, reference: String) -> Result<String, RepError> {
+    pub fn ref_resolve(&self, mut reference: String) -> Result<String, RepError> {
         if reference == "HEAD" || reference == "HEAD~" {
             let c = self.get_last_commit_hash();
             if c.is_err() {
@@ -89,6 +89,12 @@ impl Repository {
 
         // reference is something like  refs/heads/master or b248ffcf3edc5c96a45baecedf62b97b74b226bd
         if reference.starts_with("refs/") || reference.len() != 40 {
+            if !reference.starts_with("ref/heads/") {
+                reference = "refs/heads/".to_string() + &reference;
+            } else if !reference.starts_with("refs/") {
+                reference = "refs/".to_string() + &reference;
+            }
+
             let head_path = self.gitdir.clone() + "/" + &reference;
             let head = std::fs::read_to_string(&head_path);
 
