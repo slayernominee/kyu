@@ -1,10 +1,12 @@
+#![allow(dead_code)]
+
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 use flate2::Compression;
 use sha1::{Digest, Sha1};
 use std::{collections::HashMap, io::prelude::*};
 
-use crate::{repository::Repository, ObjectType};
+use crate::repository::Repository;
 
 #[derive(Clone)]
 pub struct Commit {
@@ -53,7 +55,7 @@ impl TreeEntry {
     }
 }
 
-struct Tag {
+pub struct Tag {
     data: Vec<u8>,
     size: usize,
 }
@@ -161,7 +163,7 @@ impl Tree {
                         path_to_checkout.clone(),
                     );
                 }
-                Object::Blob(b) => {
+                Object::Blob(_) => {
                     let p = path.clone() + "/" + object.get_name();
                     if !p.contains(&path_to_checkout) {
                         continue;
@@ -187,7 +189,7 @@ impl Tree {
 
     fn from_data(data: &[u8], size: usize) -> Self {
         let mut objects = vec![];
-        let mut data_to_process = data.clone();
+        let mut data_to_process = data;
 
         let repository = Repository::load(None).expect("should be a repository");
 
@@ -297,12 +299,12 @@ impl Object {
     fn deserialize(data: Vec<u8>) -> Self {
         // the data consists of the object type, a space 0x20, the object size, a null byte 0x00, and the object content
         let mut data = data.as_slice();
-        let mut space = data.iter().position(|&x| x == 0x20).unwrap();
+        let space = data.iter().position(|&x| x == 0x20).unwrap();
         let obj_type = &data[0..space];
         let obj_type = std::str::from_utf8(obj_type).expect("Invalid Object Type");
 
         data = &data[space + 1..];
-        let mut null = data.iter().position(|&x| x == 0x00).unwrap();
+        let null = data.iter().position(|&x| x == 0x00).unwrap();
         let size = &data[0..null];
         let size = std::str::from_utf8(size).expect("Invalid Object Size");
 

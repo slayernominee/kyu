@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use ini::Ini;
 use std::env;
 
@@ -72,7 +74,7 @@ impl Repository {
         Ok(head.to_string())
     }
 
-    pub fn ref_resolve(&self, mut reference: String) -> Result<String, RepError> {
+    pub fn ref_resolve(&self, reference: &str) -> Result<String, RepError> {
         if reference == "HEAD" || reference == "HEAD~" {
             let c = self.get_last_commit_hash();
             if c.is_err() {
@@ -81,21 +83,34 @@ impl Repository {
             let c = c.unwrap();
             if c.starts_with("ref: ") {
                 let c = c.split(':').collect::<Vec<&str>>()[1].trim();
-                return self.ref_resolve(c.to_string());
+                return self.ref_resolve(c);
             } else {
                 return Ok(c);
             }
         }
 
-        // reference is something like  refs/heads/master or b248ffcf3edc5c96a45baecedf62b97b74b226bd
+        let reference = reference.to_string();
+
         if reference.starts_with("refs/") || reference.len() != 40 {
-            if !reference.starts_with("ref/heads/") {
-                reference = "refs/heads/".to_string() + &reference;
-            } else if !reference.starts_with("refs/") {
-                reference = "refs/".to_string() + &reference;
+            let mut head_path = self.gitdir.clone() + "/" + &reference;
+
+            if !std::path::Path::new(&head_path).exists() {
+                // check if the path exists with a refs/ before
+                // a refs/heads/ or a refs/tags/
+                let t_head = self.gitdir.clone() + "/refs/" + &reference;
+                let t2_head = self.gitdir.clone() + "/refs/heads/" + &reference;
+                let t3_head = self.gitdir.clone() + "/refs/tags/" + &reference;
+                if std::path::Path::new(&t_head).exists() {
+                    head_path = t_head;
+                } else if std::path::Path::new(&t2_head).exists() {
+                    head_path = t2_head;
+                } else if std::path::Path::new(&t3_head).exists() {
+                    head_path = t3_head;
+                } else {
+                    return Err(RepError::InvalidReference(reference));
+                }
             }
 
-            let head_path = self.gitdir.clone() + "/" + &reference;
             let head = std::fs::read_to_string(&head_path);
 
             if head.is_err() {
@@ -107,7 +122,7 @@ impl Repository {
 
             if head.starts_with("ref: ") {
                 let head = head.split(':').collect::<Vec<&str>>()[1].trim();
-                return self.ref_resolve(head.to_string());
+                return self.ref_resolve(head);
             } else {
                 return Ok(head.to_string());
             }

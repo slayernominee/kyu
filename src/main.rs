@@ -71,7 +71,9 @@ enum Commands {
     Rm {
         files: Vec<String>,
     },
-    ShowRef,
+    ShowRef {
+        reference: String,
+    },
     Status,
     Tag,
 }
@@ -81,11 +83,15 @@ fn main() {
 
     match args.command {
         Commands::Init { path } => init(path),
-        Commands::CatFile { object_type, hash } => cat_file(object_type, &hash),
+        Commands::CatFile {
+            object_type: _,
+            hash,
+        } => cat_file(&hash),
         Commands::HashObject { path, write, type_ } => hash_object(path, write, type_),
         Commands::Log { commit } => log(commit),
-        Commands::LsTree { hash } => cat_file(ObjectType::Tree, &hash),
+        Commands::LsTree { hash } => cat_file(&hash),
         Commands::Checkout { commit, folder } => checkout(commit, folder),
+        Commands::ShowRef { reference } => show_ref(reference),
         _ => println!("Not implemented yet"),
     }
 }
@@ -106,7 +112,7 @@ fn init(path: Option<String>) {
     );
 }
 
-fn cat_file(object_type: ObjectType, hash: &str) {
+fn cat_file(hash: &str) {
     let rep = Repository::load(None).unwrap();
     // TODO: Implement loading with short hashes etc.
     let obj = Object::load(&rep, hash);
@@ -131,12 +137,12 @@ fn hash_object(path: String, write: bool, object_type: Option<ObjectType>) {
 
 fn log(commit: String) {
     let rep = Repository::load(None).unwrap();
-    let hash = rep.ref_resolve(commit);
+    let hash = rep.ref_resolve(&commit);
 
     match hash {
         Ok(hash) => {
             let commit = Object::load(&rep, &hash);
-            let mut commit = match commit {
+            let commit = match commit {
                 Object::Commit(c) => c,
                 _ => panic!("head should be a commit object"),
             };
@@ -155,6 +161,21 @@ fn log(commit: String) {
     }
 }
 
+fn show_ref(reference: String) {
+    let rep = Repository::load(None).unwrap();
+
+    let r = rep.ref_resolve(&reference);
+
+    let r = match r {
+        Ok(r) => r,
+        Err(e) => match e {
+            _ => format!("fatal: {:?}", e),
+        },
+    };
+
+    println!("{}\t{}", r, reference);
+}
+
 fn checkout(commit_or_ref: String, folder: Option<String>) {
     let pwd = std::env::current_dir().unwrap();
     let path_to_checkout = pwd.to_string_lossy();
@@ -169,7 +190,7 @@ fn checkout(commit_or_ref: String, folder: Option<String>) {
 
     let rep = Repository::load(None).unwrap();
     let commit = rep
-        .ref_resolve(commit_or_ref)
+        .ref_resolve(&commit_or_ref)
         .expect("Invalid Reference / Commit");
     let commit = Object::load(&rep, &commit);
 
