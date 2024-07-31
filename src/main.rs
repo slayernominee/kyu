@@ -72,7 +72,7 @@ enum Commands {
         files: Vec<String>,
     },
     ShowRef {
-        reference: String,
+        reference: Option<String>,
     },
     Status,
     Tag,
@@ -161,8 +161,17 @@ fn log(commit: String) {
     }
 }
 
-fn show_ref(reference: String) {
+fn show_ref(reference: Option<String>) {
     let rep = Repository::load(None).unwrap();
+
+    if reference.is_none() {
+        let refs = rep.get_refs();
+        for (refname, hash) in refs {
+            println!("{}\t{}", hash, refname);
+        }
+        return;
+    }
+    let reference = reference.unwrap();
 
     let r = rep.ref_resolve(&reference);
 

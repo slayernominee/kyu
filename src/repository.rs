@@ -54,6 +54,33 @@ impl Repository {
         Ok(s)
     }
 
+    pub fn get_refs(&self) -> Vec<(String, String)> {
+        let mut refs = vec![];
+
+        let heads = std::fs::read_dir(self.gitdir.clone() + "/refs/heads").unwrap();
+        for head in heads {
+            let head = head.unwrap();
+            let head = head.file_name().into_string().unwrap();
+            let head = head.trim().to_string();
+            let hash =
+                std::fs::read_to_string(self.gitdir.clone() + "/refs/heads/" + &head).unwrap();
+            let hash = hash.trim().to_string();
+            refs.push((format!("refs/heads/{}", head), hash));
+        }
+
+        let tags = std::fs::read_dir(self.gitdir.clone() + "/refs/tags").unwrap();
+        for tag in tags {
+            let tag = tag.unwrap();
+            let tag = tag.file_name().into_string().unwrap();
+            let tag = tag.trim().to_string();
+            let hash = std::fs::read_to_string(self.gitdir.clone() + "/refs/tags/" + &tag).unwrap();
+            let hash = hash.trim().to_string();
+            refs.push((format!("refs/tags/{}", tag), hash));
+        }
+
+        refs
+    }
+
     fn get_last_commit_hash(&self) -> Result<String, RepError> {
         let head_path = self.gitdir.clone() + "/HEAD";
         let head = std::fs::read_to_string(&head_path).unwrap();
