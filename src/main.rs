@@ -131,7 +131,7 @@ fn hash_object(path: String, write: bool, object_type: Option<ObjectType>) {
 
 fn log(commit: String) {
     let rep = Repository::load(None).unwrap();
-    let hash = rep.get_last_commit_hash();
+    let hash = rep.ref_resolve(commit);
 
     match hash {
         Ok(hash) => {
@@ -155,7 +155,7 @@ fn log(commit: String) {
     }
 }
 
-fn checkout(commit: String, folder: Option<String>) {
+fn checkout(commit_or_ref: String, folder: Option<String>) {
     let pwd = std::env::current_dir().unwrap();
     let path_to_checkout = pwd.to_string_lossy();
     let mut path_to_checkout =
@@ -168,6 +168,9 @@ fn checkout(commit: String, folder: Option<String>) {
     // if files_or_folders is None, checkout the whole commit
 
     let rep = Repository::load(None).unwrap();
+    let commit = rep
+        .ref_resolve(commit_or_ref)
+        .expect("Invalid Reference / Commit");
     let commit = Object::load(&rep, &commit);
 
     let tree = match commit {

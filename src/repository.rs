@@ -52,7 +52,7 @@ impl Repository {
         Ok(s)
     }
 
-    pub fn get_last_commit_hash(&self) -> Result<String, RepError> {
+    fn get_last_commit_hash(&self) -> Result<String, RepError> {
         let head_path = self.gitdir.clone() + "/HEAD";
         let head = std::fs::read_to_string(&head_path).unwrap();
         let head = head.trim().split(':').collect::<Vec<&str>>()[1].trim();
@@ -70,6 +70,44 @@ impl Repository {
         let head = head.trim();
 
         Ok(head.to_string())
+    }
+
+    pub fn ref_resolve(&self, reference: String) -> Result<String, RepError> {
+        if reference == "HEAD" || reference == "HEAD~" {
+            let c = self.get_last_commit_hash();
+            if c.is_err() {
+                return Err(c.err().unwrap());
+            }
+            let c = c.unwrap();
+            if c.starts_with("ref: ") {
+                let c = c.split(':').collect::<Vec<&str>>()[1].trim();
+                return self.ref_resolve(c.to_string());
+            } else {
+                return Ok(c);
+            }
+        }
+
+        // reference is something like  refs/heads/master or b248ffcf3edc5c96a45baecedf62b97b74b226bd
+        if reference.starts_with("refs/") || reference.len() != 40 {
+            let head_path = self.gitdir.clone() + "/" + &reference;
+            let head = std::fs::read_to_string(&head_path);
+
+            if head.is_err() {
+                return Err(RepError::InvalidReference(reference));
+            }
+
+            let head = head.unwrap();
+            let head = head.trim();
+
+            if head.starts_with("ref: ") {
+                let head = head.split(':').collect::<Vec<&str>>()[1].trim();
+                return self.ref_resolve(head.to_string());
+            } else {
+                return Ok(head.to_string());
+            }
+        } else {
+            Ok(reference)
+        }
     }
 
     pub fn get_object_path(&self, sha: &str) -> String {
@@ -251,6 +289,7 @@ pub enum RepError {
     ConfigFileMissing,
     ConfigError(ConfigError),
     NoCommitsInBranch(String),
+    InvalidReference(String),
 }
 
 #[derive(Debug)]
