@@ -2,7 +2,7 @@
 
 an alternative git client for the command line written in rust
 
-this project is just for fun and nothing serios, use it at your own risk
+this project is just for fun and nothing serious, use it at your own risk
 
 ## Features
 
