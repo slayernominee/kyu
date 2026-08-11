@@ -1,5 +1,7 @@
 # Kyu
 
+**Note: This repository was migrated to: [git.catq.de/me/kyu](https://git.catq.de/me/kyu)**
+
 an alternative git client for the command line written in rust
 
 this project is just for fun and nothing serious, use it at your own risk
