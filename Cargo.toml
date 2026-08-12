@@ -7,10 +7,10 @@ description = "A simple reimplmentation of git in Rust. (Strongly inspired by wy
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-chrono = "0.4.38"
-clap = { version = "4.5.11", features = ["derive"] }
-colored = "2.1.0"
-flate2 = { version = "1.0.30", features = ["zlib"] }
-hex-literal = "0.4.1"
-rust-ini = "0.21.0"
-sha1 = "0.10.6"
+chrono = "0.4"
+clap = { version = "4.6", features = ["derive"] }
+colored = "3.1"
+flate2 = { version = "1.1", features = ["zlib"] }
+hex-literal = "1.1"
+rust-ini = "0.21"
+sha1 = "0.11"
